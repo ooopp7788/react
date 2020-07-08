@@ -309,18 +309,23 @@ export function getCurrentTime() {
   return msToExpirationTime(now());
 }
 
+// 计算当前 fiber 的过期时间
 export function computeExpirationForFiber(
   currentTime: ExpirationTime,
   fiber: Fiber,
   suspenseConfig: null | SuspenseConfig,
 ): ExpirationTime {
   const mode = fiber.mode;
+  // ReactFiber 实例化时, mode 有以下几种
+  // case ConcurrentRoot: mode = ConcurrentMode | BlockingMode | StrictMode;
+  // case BlockingRoot: mode = BlockingMode | StrictMode;
+  // default: mode = NoMode;
   if ((mode & BlockingMode) === NoMode) {
     return Sync;
   }
 
-  const priorityLevel = getCurrentPriorityLevel();
-  if ((mode & ConcurrentMode) === NoMode) {
+  const priorityLevel = getCurrentPriorityLevel(); // Scheduler.unstable_getCurrentPriorityLevel: 获取当前任务节点的优先级
+  if ((mode & ConcurrentMode) === NoMode) { // 非 ConcurrentMode
     return priorityLevel === ImmediatePriority ? Sync : Batched;
   }
 
@@ -454,12 +459,12 @@ function markUpdateTimeFromFiberToRoot(fiber, expirationTime) {
   if (fiber.expirationTime < expirationTime) {
     fiber.expirationTime = expirationTime;
   }
-  let alternate = fiber.alternate;
+  let alternate = fiber.alternate; // fiber pairs?
   if (alternate !== null && alternate.expirationTime < expirationTime) {
     alternate.expirationTime = expirationTime;
   }
   // Walk the parent path to the root and update the child expiration time.
-  let node = fiber.return;
+  let node = fiber.return; // parent fiber
   let root = null;
   if (node === null && fiber.tag === HostRoot) {
     root = fiber.stateNode;

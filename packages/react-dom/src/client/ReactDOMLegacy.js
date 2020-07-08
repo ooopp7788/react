@@ -178,12 +178,18 @@ function legacyRenderSubtreeIntoContainer(
   // member of intersection type." Whyyyyyy.
   let root: RootType = (container._reactRootContainer: any);
   let fiberRoot;
+  // root 不存在时, 初始化
   if (!root) {
     // Initial mount
     root = container._reactRootContainer = legacyCreateRootFromDOMContainer(
       container,
       forceHydrate,
     );
+    // root = new ReactDOMBlockingRoot(ReactDOMBlockingRoot): {
+    //     _internalRoot: new FiberRoot().current = new FiberNode(),
+    //     render: () => ...,
+    //     unmount: () => ...,
+    // }
     fiberRoot = root._internalRoot;
     if (typeof callback === 'function') {
       const originalCallback = callback;

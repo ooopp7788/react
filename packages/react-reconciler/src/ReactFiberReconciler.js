@@ -214,6 +214,7 @@ function findHostInstanceWithWarning(
   return findHostInstance(component);
 }
 
+// 创建 fiberRoot 实例
 export function createContainer(
   containerInfo: Container,
   tag: RootTag,
@@ -225,15 +226,15 @@ export function createContainer(
 
 export function updateContainer(
   element: ReactNodeList,
-  container: OpaqueRoot,
+  container: OpaqueRoot, // fiberRoot
   parentComponent: ?React$Component<any, any>,
   callback: ?Function,
 ): ExpirationTime {
   if (__DEV__) {
     onScheduleRoot(container, element);
   }
-  const current = container.current;
-  const currentTime = requestCurrentTimeForUpdate();
+  const current = container.current; // 当前 fiberNode 实例
+  const currentTime = requestCurrentTimeForUpdate(); // 获取当前时间
   if (__DEV__) {
     // $FlowExpectedError - jest isn't a global, and isn't recognized outside of tests
     if ('undefined' !== typeof jest) {
@@ -242,7 +243,7 @@ export function updateContainer(
     }
   }
   const suspenseConfig = requestCurrentSuspenseConfig();
-  const expirationTime = computeExpirationForFiber(
+  const expirationTime = computeExpirationForFiber( // 按照 firber mode 计算当前 fiber 过期时间
     currentTime,
     current,
     suspenseConfig,
@@ -273,6 +274,17 @@ export function updateContainer(
     }
   }
 
+//   let update: Update<*> = {
+//     expirationTime,
+//     suspenseConfig,
+
+//     tag: UpdateState,
+//     payload: null,
+//     callback: null,
+
+//     next: (null: any),
+//   };
+  // 创建新的 update, 会被插入 UpdateQueue
   const update = createUpdate(expirationTime, suspenseConfig);
   // Caution: React DevTools currently depends on this property
   // being called "element".

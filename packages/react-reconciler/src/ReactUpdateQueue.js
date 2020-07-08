@@ -213,11 +213,12 @@ export function enqueueUpdate<State>(fiber: Fiber, update: Update<State>) {
   }
 
   const sharedQueue = updateQueue.shared;
-  const pending = sharedQueue.pending;
+  const pending = sharedQueue.pending; // pending 是一个链表
   if (pending === null) {
     // This is the first update. Create a circular list.
     update.next = update;
   } else {
+      // 在 pending 和 pending.next 中间插入 update
     update.next = pending.next;
     pending.next = update;
   }
