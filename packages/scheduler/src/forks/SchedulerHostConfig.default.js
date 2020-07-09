@@ -192,6 +192,7 @@ if (
       deadline = currentTime + yieldInterval;
       const hasTimeRemaining = true;
       try {
+          // 在帧时间 deadline 内 执行任务, 返回值表示是否有剩余任务
         const hasMoreWork = scheduledHostCallback(
           hasTimeRemaining,
           currentTime,
@@ -200,6 +201,7 @@ if (
           isMessageLoopRunning = false;
           scheduledHostCallback = null;
         } else {
+        // 还有任务, postMessage 下一帧执行
           // If there's more work, schedule the next message event at the end
           // of the preceding one.
           port.postMessage(null);

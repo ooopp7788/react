@@ -316,7 +316,7 @@ export function computeExpirationForFiber(
   suspenseConfig: null | SuspenseConfig,
 ): ExpirationTime {
   const mode = fiber.mode;
-  // ReactFiber 实例化时, mode 有以下几种
+  // ReactFiber 实例, mode 有以下几种
   // case ConcurrentRoot: mode = ConcurrentMode | BlockingMode | StrictMode;
   // case BlockingRoot: mode = BlockingMode | StrictMode;
   // default: mode = NoMode;
@@ -385,12 +385,14 @@ export function scheduleUpdateOnFiber(
   checkForNestedUpdates();
   warnAboutInvalidUpdatesOnClassComponentsInDEV(fiber);
 
-  const root = markUpdateTimeFromFiberToRoot(fiber, expirationTime);
+  const root = markUpdateTimeFromFiberToRoot(fiber, expirationTime); // 向上更新 fiber expirationTime
   if (root === null) {
     warnAboutUpdateOnUnmountedFiberInDEV(fiber);
     return;
   }
-
+  // 比较当前 fiber 和 正在 rendering 的 fiber expirationTime
+  // expirationTime: 代表优先级
+  // expirationTime > renderExpirationTime 则记录中断
   checkForInterruption(fiber, expirationTime);
   recordScheduleUpdate();
 
@@ -398,7 +400,7 @@ export function scheduleUpdateOnFiber(
   // priority as an argument to that function and this one.
   const priorityLevel = getCurrentPriorityLevel();
 
-  if (expirationTime === Sync) {
+  if (expirationTime === Sync) { // 同步任务
     if (
       // Check if we're inside unbatchedUpdates
       (executionContext & LegacyUnbatchedContext) !== NoContext &&
@@ -456,21 +458,29 @@ export const scheduleWork = scheduleUpdateOnFiber;
 // on a fiber.
 function markUpdateTimeFromFiberToRoot(fiber, expirationTime) {
   // Update the source fiber's expiration time
+  // fiber.expirationTime 默认为 0, 更新时间
   if (fiber.expirationTime < expirationTime) {
     fiber.expirationTime = expirationTime;
   }
-  let alternate = fiber.alternate; // fiber pairs?
+  let alternate = fiber.alternate; // fiber pairs, 同步更新时间
   if (alternate !== null && alternate.expirationTime < expirationTime) {
     alternate.expirationTime = expirationTime;
   }
   // Walk the parent path to the root and update the child expiration time.
+  // fiber 是一个 T 形链表结构
+  // fiber.return -> parent fiber
+  // fiber.sibling -> 相邻 fiber
+  // fiber.child -> 子 fiber
+
   let node = fiber.return; // parent fiber
   let root = null;
   if (node === null && fiber.tag === HostRoot) {
     root = fiber.stateNode;
   } else {
+    // 向上遍历, 更新所有节点 expirationTime
     while (node !== null) {
       alternate = node.alternate;
+      // 更新 child 和 alternate child 过期时间
       if (node.childExpirationTime < expirationTime) {
         node.childExpirationTime = expirationTime;
         if (

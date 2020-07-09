@@ -78,6 +78,7 @@ var isPerformingWork = false;
 var isHostCallbackScheduled = false;
 var isHostTimeoutScheduled = false;
 
+// 检查 timerQueue, 过期任务 push 进 taskQueue
 function advanceTimers(currentTime) {
   // Check for tasks that are no longer delayed and add them to the queue.
   let timer = peek(timerQueue);
@@ -87,6 +88,7 @@ function advanceTimers(currentTime) {
       pop(timerQueue);
     } else if (timer.startTime <= currentTime) {
       // Timer fired. Transfer to the task queue.
+      // 过期定时任务 push 进 taskQueue
       pop(timerQueue);
       timer.sortIndex = timer.expirationTime;
       push(taskQueue, timer);
@@ -95,6 +97,7 @@ function advanceTimers(currentTime) {
         timer.isQueued = true;
       }
     } else {
+    // 没有到期任务
       // Remaining timers are pending.
       return;
     }
@@ -102,6 +105,7 @@ function advanceTimers(currentTime) {
   }
 }
 
+// 执行过期任务
 function handleTimeout(currentTime) {
   isHostTimeoutScheduled = false;
   advanceTimers(currentTime);
@@ -109,10 +113,11 @@ function handleTimeout(currentTime) {
   if (!isHostCallbackScheduled) {
     if (peek(taskQueue) !== null) {
       isHostCallbackScheduled = true;
-      requestHostCallback(flushWork);
+      requestHostCallback(flushWork); // 顺序执行 taskQueue
     } else {
       const firstTimer = peek(timerQueue);
       if (firstTimer !== null) {
+        // 查找最近的任务, 设置定时器, 最近任务到时时, 再次 handleTimeout
         requestHostTimeout(handleTimeout, firstTimer.startTime - currentTime);
       }
     }
@@ -169,6 +174,8 @@ function workLoop(hasTimeRemaining, initialTime) {
     currentTask !== null &&
     !(enableSchedulerDebugging && isSchedulerPaused)
   ) {
+      // shouldYieldToHost 判断帧时间是否还有剩余
+      // 执行 taskQueue, 直至无任务 或 无到期任务 或 帧剩余时间不足
     if (
       currentTask.expirationTime > currentTime &&
       (!hasTimeRemaining || shouldYieldToHost())
@@ -309,6 +316,7 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
         ? options.timeout
         : timeoutForPriorityLevel(priorityLevel);
   } else {
+    // 根据 priorityLevel 计算 timeout
     timeout = timeoutForPriorityLevel(priorityLevel);
     startTime = currentTime;
   }
@@ -329,9 +337,12 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
 
   if (startTime > currentTime) {
     // This is a delayed task.
-    newTask.sortIndex = startTime;
+    newTask.sortIndex = startTime; // 任务未开始
     push(timerQueue, newTask);
     if (peek(taskQueue) === null && newTask === peek(timerQueue)) {
+    // 所有任务都未开始, 且当前任务为最早的任务
+    // 1. 取消当前任务调度
+    // 2. 按当前任务时间设置 timer, 到时再做任务调度
       // All tasks are delayed, and this is the task with the earliest delay.
       if (isHostTimeoutScheduled) {
         // Cancel an existing timeout.
@@ -343,6 +354,8 @@ function unstable_scheduleCallback(priorityLevel, callback, options) {
       requestHostTimeout(handleTimeout, startTime - currentTime);
     }
   } else {
+    // 任务已开始, 按照 expirationTime 排序
+    // 交给 scheduler 调度器执行
     newTask.sortIndex = expirationTime;
     push(taskQueue, newTask);
     if (enableProfiling) {
